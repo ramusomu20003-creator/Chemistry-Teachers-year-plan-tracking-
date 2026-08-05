@@ -41,10 +41,10 @@
                     </div>
                 </div>
 
-                <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4 max-w-md mx-auto">
+                <form id="loginForm" onsubmit="return handleLogin(event)" class="space-y-4 max-w-md mx-auto">
                     <div>
                         <label class="block text-xs font-extrabold mb-1 text-slate-700 tracking-wider uppercase">User Name</label>
-                        <input type="text" id="username" required placeholder="Enter username (e.g. admin_user)" class="w-full border border-slate-200 bg-white/70 p-3 pl-4 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 font-semibold text-slate-900 placeholder-slate-400 outline-none shadow-sm transition text-sm">
+                        <input type="text" id="username" required placeholder="admin_user" class="w-full border border-slate-200 bg-white/70 p-3 pl-4 rounded-xl focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 font-semibold text-slate-900 placeholder-slate-400 outline-none shadow-sm transition text-sm">
                     </div>
                     <div>
                         <label class="block text-xs font-extrabold mb-1 text-slate-700 tracking-wider uppercase">Password</label>
@@ -55,7 +55,7 @@
                         ❌ Invalid credentials provided. Please check inputs.
                     </div>
                     
-                    <button type="button" onclick="handleLogin(event)" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm tracking-wide uppercase mt-2">
+                    <button type="submit" class="w-full bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white font-bold py-3.5 rounded-xl shadow-lg transition text-sm tracking-wide uppercase mt-2">
                         Sign In
                     </button>
                 </form>
@@ -77,4 +77,749 @@
                 <button onclick="syncFromDatabase()" class="px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold border border-emerald-200 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5">
                     🔄 Sync DB Data
                 </button>
-                <button onclick="handleLogout()" class="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-7
+                <button onclick="handleLogout()" class="px-5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold border border-rose-200 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5">
+                    🔒 Secure Logout
+                </button>
+            </div>
+        </header>
+
+        <div id="tabNavigationStrip" class="flex flex-wrap justify-center gap-3 mb-10">
+            <button onclick="switchTab('register')" id="btn-register" class="px-6 py-3 bg-indigo-950 text-indigo-100 border border-indigo-900 rounded-xl hover:bg-indigo-900 font-bold transition shadow-sm">📋 Register Teacher</button>
+            <button onclick="switchTab('teacherEdit')" id="btn-teacherEdit" class="px-6 py-3 bg-purple-950 text-purple-100 border border-purple-900 rounded-xl hover:bg-purple-900 font-bold transition shadow-sm">✏️ Update Year Plan</button>
+            <button onclick="switchTab('manageTeachers')" id="btn-manageTeachers" class="px-6 py-3 bg-yellow-400 text-yellow-950 border border-yellow-500 rounded-xl hover:bg-yellow-300 font-bold transition shadow-sm">👥 Manage Teachers</button>
+            <button onclick="switchTab('dashboard')" id="btn-dashboard" class="px-6 py-3 bg-blue-950 text-blue-100 border border-blue-900 rounded-xl hover:bg-blue-900 font-bold transition shadow-sm">📊 Dashboard & Tracking</button>
+        </div>
+
+        <div id="register-section" class="hidden">
+            <div class="border-l-4 border-indigo-600 pl-3 mb-4">
+                <h3 class="text-2xl font-extrabold text-indigo-950">Register Teacher & Workload</h3>
+            </div>
+            
+            <form id="registrationForm" onsubmit="handleRegistrationSubmit(event)" class="space-y-8 bg-slate-50/50 p-6 rounded-2xl border border-slate-200/60 shadow-inner mt-4">
+                <div>
+                    <label class="block font-bold mb-2 text-slate-700 text-base">Teacher Name</label>
+                    <input type="text" id="teacherName" placeholder="Enter teacher name" required class="w-full md:w-1/2 border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white font-semibold shadow-sm transition">
+                </div>
+                
+                <div>
+                    <h4 class="font-bold text-slate-800 mb-1 text-lg">Workload Assignments</h4>
+                    <p class="text-xs text-slate-500 mb-4">Select operational block, subject, and assign target grade sections.</p>
+                    
+                    <div id="assignments-container" class="space-y-4"></div>
+                    
+                    <button type="button" onclick="addAssignmentRow()" class="mt-4 px-4 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl border border-indigo-100 hover:bg-indigo-100 transition shadow-sm">
+                        + Add Another Block / Subject
+                    </button>
+                </div>
+
+                <div class="pt-4 border-t border-slate-200 flex flex-col gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="autoGenerateYearPlanCheckbox" checked class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                        <span class="font-bold text-slate-800 text-sm">⚡ Auto-Generate Monthly Academic Year Plan (June - March) upon saving</span>
+                    </label>
+                </div>
+
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <button type="submit" id="regSubmitBtn" class="flex-grow bg-indigo-600 text-white py-4 rounded-xl hover:bg-indigo-700 font-extrabold text-xl shadow-lg transition">Save Teacher Profile & Initialize Plan</button>
+                    <button type="button" onclick="resetRegistrationForm()" class="px-8 bg-rose-400 text-white py-4 rounded-xl hover:bg-rose-500 font-extrabold text-lg shadow-lg transition flex items-center justify-center gap-2">🧹 Clear Form</button>
+                </div>
+            </form>
+            <div id="registerMsg" class="mt-4 text-center font-bold text-emerald-700 hidden bg-emerald-50 p-3 rounded-xl border border-emerald-200 shadow-sm">Teacher profile and annual plan initialized successfully!</div>
+        </div>
+
+        <div id="dashboard-section" class="hidden">
+            <div class="mb-8 flex flex-wrap gap-4 items-end bg-slate-50 p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="w-full md:w-1/4">
+                    <label class="block font-bold text-slate-700 text-sm mb-1">Select Teacher:</label>
+                    <select id="dashboardTeacherSelect" onchange="populateDashboardBlocks()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
+                        <option value="" disabled selected>-- Choose a Teacher --</option>
+                    </select>
+                </div>
+                <div class="w-full md:w-1/4">
+                    <label class="block font-bold text-slate-700 text-sm mb-1">Filter by Block:</label>
+                    <select id="dashboardBlockSelect" onchange="populateDashboardGrades()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
+                        <option value="All">All Blocks</option>
+                    </select>
+                </div>
+                <div class="w-full md:w-1/4">
+                    <label class="block font-bold text-slate-700 text-sm mb-1">Filter by Grade/Class:</label>
+                    <select id="dashboardGradeSelect" onchange="renderTeacherData()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
+                        <option value="All">All Grades</option>
+                    </select>
+                </div>
+                <div class="flex-grow"></div>
+                <div class="w-full md:w-auto mt-4 md:mt-0 pt-2">
+                    <button onclick="exportToExcel()" class="w-full px-6 py-3 bg-rose-800 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-lg text-sm">📥 Export Filtered Excel</button>
+                </div>
+            </div>
+
+            <div id="teacher-dashboard-content" class="hidden">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-md border border-blue-500">
+                        <h4 class="text-blue-100 font-bold uppercase tracking-wider text-xs">Filtered Lessons</h4>
+                        <p id="stat-total" class="text-4xl font-black mt-1">0</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-amber-500 to-amber-600 text-white p-6 rounded-2xl shadow-md border border-amber-400">
+                        <h4 class="text-amber-100 font-bold uppercase tracking-wider text-xs">Pending Status</h4>
+                        <p id="stat-pending" class="text-4xl font-black mt-1">0</p>
+                    </div>
+                    <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 rounded-2xl shadow-md border border-emerald-500">
+                        <h4 class="text-emerald-100 font-bold uppercase tracking-wider text-xs">Completed Status</h4>
+                        <p id="stat-completed" class="text-4xl font-black mt-1">0</p>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto shadow-xl rounded-2xl border border-slate-200 table-scroll">
+                    <table class="min-w-full bg-white text-left" id="planTable">
+                        <thead class="bg-slate-900 text-slate-100 text-xs uppercase tracking-wider">
+                            <tr>
+                                <th class="py-4 px-5 font-semibold min-w-[100px] border-r border-slate-800">Block</th>
+                                <th class="py-4 px-5 font-semibold min-w-[120px] border-r border-slate-800">Subject</th>
+                                <th class="py-4 px-5 font-semibold min-w-[110px] border-r border-slate-800">Class</th>
+                                <th class="py-4 px-5 font-semibold min-w-[100px] border-r border-slate-800">Month</th>
+                                <th class="py-4 px-6 font-semibold min-w-[240px] border-r border-slate-800">NCERT</th>
+                                <th class="py-4 px-6 font-semibold min-w-[240px] border-r border-slate-800">Assessments</th>
+                                <th class="py-4 px-6 font-semibold min-w-[240px] border-r border-slate-800">NEET / IIT</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-1</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-2</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-3</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-4</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-5</th>
+                                <th class="py-4 px-3 font-semibold text-center min-w-[130px] border-r border-slate-800">Sec-6</th>
+                                <th class="py-4 px-6 font-semibold min-w-[155px]">Track Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="planTableBody" class="divide-y divide-slate-200/60 text-slate-700 text-sm font-medium"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="noDataMsg" class="text-center py-16 bg-slate-50 rounded-2xl border border-slate-200/70 text-slate-400 font-bold text-lg">
+                👆 Select a teacher above to view tracking records.
+            </div>
+        </div>
+
+        <div id="teacherEdit-section" class="hidden max-w-6xl mx-auto">
+            <div class="border-l-4 border-purple-600 pl-3 mb-4">
+                <h3 class="text-2xl font-bold text-purple-950">Update Lesson Plan</h3>
+            </div>
+            
+            <div class="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                    <div>
+                        <label class="block font-bold mb-2 text-slate-700 text-sm">Select Teacher</label>
+                        <select id="editTeacherSelect" onchange="populateEditBlocks()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-2 text-slate-700 text-sm">Select Block</label>
+                        <select id="editBlockSelect" onchange="populateEditSubjects()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-2 text-slate-700 text-sm">Select Subject</label>
+                        <select id="editSubjectSelect" onchange="populateEditGrades()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm"></select>
+                    </div>
+                    <div>
+                        <label class="block font-bold mb-2 text-slate-700 text-sm">Select Grade</label>
+                        <select id="editGradeSelect" onchange="loadPlanForEdit()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm">
+                            <option value="" disabled selected>-- Choose Subject First --</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div id="existingPlanContainer" class="hidden mt-6">
+                    <h4 class="font-bold text-slate-800 mb-2 text-base">Modify Data & Save Updates</h4>
+                    <div class="table-scroll overflow-x-auto max-h-[500px] border border-slate-200 rounded-xl shadow-md">
+                        <table class="min-w-full bg-white text-left">
+                            <thead class="bg-slate-900 text-slate-100 sticky top-0 z-10 text-xs uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-3 px-4 min-w-[120px] border-r border-slate-800">Month</th>
+                                    <th class="py-3 px-4 min-w-[220px] border-r border-slate-800">NCERT</th>
+                                    <th class="py-3 px-4 min-w-[220px] border-r border-slate-800">Assessments</th>
+                                    <th class="py-3 px-4 min-w-[220px] border-r border-slate-800">NEET / IIT</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-1</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-2</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-3</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-4</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-5</th>
+                                    <th class="py-3 px-2 min-w-[125px] text-center border-r border-slate-800">Sec-6</th>
+                                    <th class="py-3 px-4 min-w-[140px]">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="existingPlanBody" class="divide-y divide-slate-100 text-slate-700 text-sm"></tbody>
+                        </table>
+                    </div>
+
+                    <div class="mt-6">
+                        <button onclick="saveEditedPlan()" class="w-full bg-purple-600 text-white py-4 rounded-xl hover:bg-purple-700 font-extrabold text-xl shadow-lg transition">Save Updates to Database</button>
+                    </div>
+                </div>
+            </div>
+            <div id="editSuccessMsg" class="mt-4 text-center font-bold text-emerald-700 hidden bg-emerald-50 p-3 rounded-xl border border-emerald-200 shadow-sm animate-bounce">Updates saved successfully!</div>
+        </div>
+
+        <div id="manageTeachers-section" class="hidden">
+            <div class="border-l-4 border-orange-600 pl-3 mb-6">
+                <h3 class="text-2xl font-bold text-orange-950">Manage Registered Teachers</h3>
+                <p class="text-xs text-slate-500 mt-1">View or delete teacher profiles.</p>
+            </div>
+            <div id="teachersManagementList" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+        </div>
+
+    </div>
+
+    <script>
+        const API_ENDPOINT = '/api/data';
+        let teachersMasterDB = [];
+        let currentUserPermissions = [];
+
+        const DEFAULT_MONTHS = ["June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
+
+        const USER_CREDENTIALS = {
+            "edit_user": { pass: "edit123", tabs: ["register", "teacherEdit"] },
+            "admin_user": { pass: "admin123", tabs: ["register", "teacherEdit", "manageTeachers", "dashboard"] }
+        };
+
+        const TAB_STYLES = {
+            register: {
+                active: "px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-md",
+                inactive: "px-6 py-3 bg-indigo-950 text-indigo-100 border border-indigo-900 rounded-xl hover:bg-indigo-900 font-bold"
+            },
+            teacherEdit: {
+                active: "px-6 py-3 bg-purple-600 text-white rounded-xl font-bold shadow-md",
+                inactive: "px-6 py-3 bg-purple-950 text-purple-100 border border-purple-900 rounded-xl hover:bg-purple-900 font-bold"
+            },
+            manageTeachers: {
+                active: "px-6 py-3 bg-amber-500 text-white rounded-xl font-bold shadow-md",
+                inactive: "px-6 py-3 bg-yellow-400 text-yellow-950 border border-yellow-500 rounded-xl hover:bg-yellow-300 font-bold"
+            },
+            dashboard: {
+                active: "px-6 py-3 bg-blue-600 text-white rounded-xl font-bold shadow-md",
+                inactive: "px-6 py-3 bg-blue-950 text-blue-100 border border-blue-900 rounded-xl hover:bg-blue-900 font-bold"
+            }
+        };
+
+        async function initApp() {
+            const loggedUser = localStorage.getItem('montessoriLoggedUser');
+            if (loggedUser && USER_CREDENTIALS[loggedUser]) {
+                currentUserPermissions = USER_CREDENTIALS[loggedUser].tabs;
+                showMainWorkspace();
+                await syncFromDatabase();
+                setInterval(syncFromDatabase, 10000); 
+            } else {
+                localStorage.removeItem('montessoriLoggedUser');
+                showLoginScreen();
+            }
+        }
+
+        async function syncFromDatabase() {
+            try {
+                const res = await fetch(`${API_ENDPOINT}?nocache=${Date.now()}`, {
+                    method: 'GET',
+                    headers: { 
+                        'Pragma': 'no-cache', 
+                        'Cache-Control': 'no-cache, no-store, must-revalidate' 
+                    }
+                });
+                if (res.ok) {
+                    teachersMasterDB = await res.json();
+                } else {
+                    throw new Error("API not available");
+                }
+            } catch (err) {
+                const localData = localStorage.getItem('teachersMasterDB');
+                if (localData) {
+                    teachersMasterDB = JSON.parse(localData);
+                }
+            }
+
+            const currentDashTeacher = document.getElementById('dashboardTeacherSelect')?.value;
+            const currentEditTeacher = document.getElementById('editTeacherSelect')?.value;
+
+            refreshAllDropdowns();
+
+            if (currentDashTeacher) {
+                document.getElementById('dashboardTeacherSelect').value = currentDashTeacher;
+                renderTeacherData();
+            }
+            if (currentEditTeacher) {
+                document.getElementById('editTeacherSelect').value = currentEditTeacher;
+            }
+        }
+
+        async function saveToDatabase() {
+            try {
+                const res = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(teachersMasterDB)
+                });
+                
+                if (!res.ok) throw new Error("Database server unreachable");
+                await syncFromDatabase();
+                return true;
+            } catch (err) {
+                console.warn("API write failed, saving to LocalStorage fallback:", err);
+                localStorage.setItem('teachersMasterDB', JSON.stringify(teachersMasterDB));
+                refreshAllDropdowns();
+                return true;
+            }
+        }
+
+        function handleLogin(e) {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            const usernameInput = document.getElementById('username').value.trim().toLowerCase();
+            const passwordInput = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('loginError');
+
+            const matchedKey = Object.keys(USER_CREDENTIALS).find(k => k.toLowerCase() === usernameInput);
+
+            if (matchedKey && USER_CREDENTIALS[matchedKey].pass === passwordInput) {
+                localStorage.setItem('montessoriLoggedUser', matchedKey);
+                currentUserPermissions = USER_CREDENTIALS[matchedKey].tabs;
+                
+                if (errorMsg) errorMsg.classList.add('hidden');
+                
+                showMainWorkspace();
+                syncFromDatabase();
+            } else {
+                if (errorMsg) {
+                    errorMsg.classList.remove('hidden');
+                    errorMsg.innerText = "❌ Invalid username or password. Please check your credentials.";
+                }
+            }
+
+            return false;
+        }
+
+        function handleLogout() {
+            localStorage.removeItem('montessoriLoggedUser');
+            showLoginScreen();
+        }
+
+        function showLoginScreen() {
+            const loginScr = document.getElementById('loginScreen');
+            const workspaceScr = document.getElementById('mainAppWorkspace');
+            
+            loginScr.style.display = 'flex';
+            loginScr.classList.remove('hidden');
+            workspaceScr.style.display = 'none';
+            workspaceScr.classList.add('hidden');
+        }
+
+        function showMainWorkspace() {
+            const loginScr = document.getElementById('loginScreen');
+            const workspaceScr = document.getElementById('mainAppWorkspace');
+
+            loginScr.style.display = 'none';
+            loginScr.classList.add('hidden');
+            workspaceScr.style.display = 'block';
+            workspaceScr.classList.remove('hidden');
+
+            ['register', 'teacherEdit', 'manageTeachers', 'dashboard'].forEach(tab => {
+                const btn = document.getElementById(`btn-${tab}`);
+                if (btn) {
+                    btn.style.display = currentUserPermissions.includes(tab) ? 'inline-block' : 'none';
+                }
+            });
+
+            if (currentUserPermissions.length > 0) {
+                switchTab(currentUserPermissions[0]);
+            }
+        }
+
+        function switchTab(tabId) {
+            ['register', 'teacherEdit', 'manageTeachers', 'dashboard'].forEach(tab => {
+                const sec = document.getElementById(`${tab}-section`);
+                const btn = document.getElementById(`btn-${tab}`);
+                if (sec) sec.classList.add('hidden');
+                if (btn) btn.className = TAB_STYLES[tab].inactive;
+            });
+
+            const activeSec = document.getElementById(`${tabId}-section`);
+            const activeBtn = document.getElementById(`btn-${tabId}`);
+            if (activeSec) activeSec.classList.remove('hidden');
+            if (activeBtn) activeBtn.className = TAB_STYLES[tabId].active;
+
+            if (tabId === 'manageTeachers') renderTeachersManagementList();
+        }
+
+        function addAssignmentRow() {
+            const container = document.getElementById('assignments-container');
+            const id = Date.now();
+            const div = document.createElement('div');
+            div.className = "p-4 bg-white rounded-xl border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end relative";
+            div.id = `assignment-${id}`;
+            div.innerHTML = `
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Block</label>
+                    <input type="text" placeholder="e.g. ISAP / CBSE" class="assign-block w-full border p-2 rounded-lg text-sm" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Subject</label>
+                    <input type="text" placeholder="e.g. Chemistry" class="assign-subject w-full border p-2 rounded-lg text-sm" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Target Classes (Comma Separated)</label>
+                    <input type="text" placeholder="Grade 7, Grade 8" class="assign-grades w-full border p-2 rounded-lg text-sm" required>
+                </div>
+                <button type="button" onclick="document.getElementById('assignment-${id}').remove()" class="absolute top-2 right-2 text-rose-500 font-bold text-xs">✕ Remove</button>
+            `;
+            container.appendChild(div);
+        }
+
+        async function handleRegistrationSubmit(e) {
+            e.preventDefault();
+            const name = document.getElementById('teacherName').value.trim();
+            const rows = document.querySelectorAll('#assignments-container > div');
+            const shouldAutoGenerate = document.getElementById('autoGenerateYearPlanCheckbox').checked;
+            
+            if (rows.length === 0) {
+                alert("Please add at least one workload assignment.");
+                return;
+            }
+
+            const assignments = [];
+            rows.forEach(r => {
+                const block = r.querySelector('.assign-block').value.trim();
+                const subject = r.querySelector('.assign-subject').value.trim();
+                const grades = r.querySelector('.assign-grades').value.split(',').map(g => g.trim()).filter(Boolean);
+                assignments.push({ block, subject, grades });
+            });
+
+            let teacher = teachersMasterDB.find(t => t.name.toLowerCase() === name.toLowerCase());
+            if (!teacher) {
+                teacher = { id: Date.now(), name, assignments: [], plans: [] };
+                teachersMasterDB.push(teacher);
+            }
+            teacher.assignments = assignments;
+            if (!teacher.plans) teacher.plans = [];
+
+            if (shouldAutoGenerate) {
+                assignments.forEach(assign => {
+                    assign.grades.forEach(grade => {
+                        DEFAULT_MONTHS.forEach(month => {
+                            const exists = teacher.plans.some(p => p.block === assign.block && p.subject === assign.subject && p.grade === grade && p.Month === month);
+                            if (!exists) {
+                                teacher.plans.push({
+                                    block: assign.block,
+                                    subject: assign.subject,
+                                    grade: grade,
+                                    Month: month,
+                                    NCERT: '',
+                                    Assessments: '',
+                                    NEET: '',
+                                    Sec1: '', Sec2: '', Sec3: '', Sec4: '', Sec5: '', Sec6: '',
+                                    Status: 'Pending'
+                                });
+                            }
+                        });
+                    });
+                });
+            }
+
+            const saved = await saveToDatabase();
+            if (saved) {
+                document.getElementById('registerMsg').classList.remove('hidden');
+                setTimeout(() => document.getElementById('registerMsg').classList.add('hidden'), 3000);
+                resetRegistrationForm();
+                refreshAllDropdowns();
+            }
+        }
+
+        function resetRegistrationForm() {
+            document.getElementById('registrationForm').reset();
+            document.getElementById('assignments-container').innerHTML = '';
+            addAssignmentRow();
+        }
+
+        function refreshAllDropdowns() {
+            const dashSelect = document.getElementById('dashboardTeacherSelect');
+            const editSelect = document.getElementById('editTeacherSelect');
+            
+            [dashSelect, editSelect].forEach(sel => {
+                if (!sel) return;
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="" disabled selected>-- Choose Teacher --</option>';
+                teachersMasterDB.forEach(t => {
+                    sel.innerHTML += `<option value="${t.name}">${t.name}</option>`;
+                });
+                if (currentVal) sel.value = currentVal;
+            });
+        }
+
+        function populateDashboardBlocks() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const blockSel = document.getElementById('dashboardBlockSelect');
+            
+            blockSel.innerHTML = '<option value="All">All Blocks</option>';
+            if (teacher && teacher.assignments) {
+                const blocks = [...new Set(teacher.assignments.map(a => a.block))];
+                blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
+            }
+            populateDashboardGrades();
+        }
+
+        function populateDashboardGrades() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            const block = document.getElementById('dashboardBlockSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const gradeSel = document.getElementById('dashboardGradeSelect');
+
+            gradeSel.innerHTML = '<option value="All">All Grades</option>';
+            if (teacher && teacher.assignments) {
+                let grades = [];
+                teacher.assignments.forEach(a => {
+                    if (block === 'All' || a.block === block) {
+                        grades.push(...a.grades);
+                    }
+                });
+                [...new Set(grades)].forEach(g => gradeSel.innerHTML += `<option value="${g}">${g}</option>`);
+            }
+            renderTeacherData();
+        }
+
+        function populateEditBlocks() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const blockSel = document.getElementById('editBlockSelect');
+            
+            blockSel.innerHTML = '<option value="" disabled selected>-- Select Block --</option>';
+            document.getElementById('editSubjectSelect').innerHTML = '<option value="" disabled selected>-- Select Block First --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
+            if (teacher && teacher.assignments) {
+                const blocks = [...new Set(teacher.assignments.map(a => a.block))];
+                blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
+            }
+        }
+
+        function populateEditSubjects() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const subSel = document.getElementById('editSubjectSelect');
+
+            subSel.innerHTML = '<option value="" disabled selected>-- Select Subject --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
+            if (teacher && teacher.assignments) {
+                const subs = teacher.assignments.filter(a => a.block === block).map(a => a.subject);
+                [...new Set(subs)].forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
+            }
+        }
+
+        function populateEditGrades() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const gradeSel = document.getElementById('editGradeSelect');
+
+            gradeSel.innerHTML = '<option value="" disabled selected>-- Select Grade --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
+            if (teacher && teacher.assignments) {
+                const assign = teacher.assignments.find(a => a.block === block && a.subject === sub);
+                if (assign) {
+                    assign.grades.forEach(g => gradeSel.innerHTML += `<option value="${g}">${g}</option>`);
+                }
+            }
+        }
+
+        function loadPlanForEdit() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            if (!tName || !block || !sub || !grade) return;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            const container = document.getElementById('existingPlanContainer');
+            const tbody = document.getElementById('existingPlanBody');
+            tbody.innerHTML = '';
+
+            DEFAULT_MONTHS.forEach(m => {
+                let planRow = teacher.plans.find(p => p.block === block && p.subject === sub && p.grade === grade && p.Month === m);
+                if (!planRow) {
+                    planRow = { Month: m, NCERT: '', Assessments: '', NEET: '', Sec1: '', Sec2: '', Sec3: '', Sec4: '', Sec5: '', Sec6: '', Status: 'Pending' };
+                }
+
+                tbody.innerHTML += `
+                    <tr data-month="${m}" class="hover:bg-slate-50">
+                        <td class="py-2 px-3 font-bold text-slate-800 border-r">${m}</td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-ncert w-full border p-1.5 rounded text-xs" value="${planRow.NCERT || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-assessments w-full border p-1.5 rounded text-xs" value="${planRow.Assessments || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-neet w-full border p-1.5 rounded text-xs" value="${planRow.NEET || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec1 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec1 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec2 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec2 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec3 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec3 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec4 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec4 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec5 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec5 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec6 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec6 || ''}"></td>
+                        <td class="py-2 px-2">
+                            <select class="edit-status w-full border p-1.5 rounded text-xs font-bold ${planRow.Status === 'Completed' ? 'text-emerald-600' : 'text-amber-600'}">
+                                <option value="Pending" ${planRow.Status !== 'Completed' ? 'selected' : ''}>Pending</option>
+                                <option value="Completed" ${planRow.Status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        async function saveEditedPlan() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            teacher.plans = teacher.plans.filter(p => !(p.block === block && p.subject === sub && p.grade === grade));
+
+            const trs = document.querySelectorAll('#existingPlanBody tr');
+            trs.forEach(tr => {
+                const Month = tr.getAttribute('data-month');
+                const NCERT = tr.querySelector('.edit-ncert').value.trim();
+                const Assessments = tr.querySelector('.edit-assessments').value.trim();
+                const NEET = tr.querySelector('.edit-neet').value.trim();
+                const Sec1 = tr.querySelector('.edit-sec1').value.trim();
+                const Sec2 = tr.querySelector('.edit-sec2').value.trim();
+                const Sec3 = tr.querySelector('.edit-sec3').value.trim();
+                const Sec4 = tr.querySelector('.edit-sec4').value.trim();
+                const Sec5 = tr.querySelector('.edit-sec5').value.trim();
+                const Sec6 = tr.querySelector('.edit-sec6').value.trim();
+                const Status = tr.querySelector('.edit-status').value;
+
+                if (NCERT || Assessments || NEET || Sec1 || Sec2 || Sec3 || Sec4 || Sec5 || Sec6) {
+                    teacher.plans.push({ block, subject: sub, grade, Month, NCERT, Assessments, NEET, Sec1, Sec2, Sec3, Sec4, Sec5, Sec6, Status });
+                }
+            });
+
+            const saved = await saveToDatabase();
+            if (saved) {
+                const msg = document.getElementById('editSuccessMsg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        }
+
+        function renderTeacherData() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            const blockFilter = document.getElementById('dashboardBlockSelect').value;
+            const gradeFilter = document.getElementById('dashboardGradeSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            
+            if (!teacher) return;
+
+            document.getElementById('teacher-dashboard-content').classList.remove('hidden');
+            document.getElementById('noDataMsg').classList.add('hidden');
+
+            const tbody = document.getElementById('planTableBody');
+            tbody.innerHTML = '';
+
+            let total = 0, pending = 0, completed = 0;
+
+            if (teacher.plans && teacher.plans.length > 0) {
+                const filteredPlans = teacher.plans.filter(p => {
+                    const matchBlock = (blockFilter === 'All' || p.block === blockFilter);
+                    const matchGrade = (gradeFilter === 'All' || p.grade === gradeFilter);
+                    return matchBlock && matchGrade;
+                });
+
+                filteredPlans.forEach(p => {
+                    total++;
+                    if (p.Status === 'Completed') completed++; else pending++;
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 px-4 border-r">${p.block || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.subject || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.grade || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.Month || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.NCERT || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.Assessments || '-'}</td>
+                            <td class="py-3 px-4 border-r">${p.NEET || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec1 || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec2 || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec3 || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec4 || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec5 || '-'}</td>
+                            <td class="py-3 px-2 border-r text-center">${p.Sec6 || '-'}</td>
+                            <td class="py-3 px-4 font-bold ${p.Status === 'Completed' ? 'text-emerald-600' : 'text-amber-600'}">${p.Status || 'Pending'}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            if (total === 0) {
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-6 text-slate-400">No active plan items found matching selected filters.</td></tr>`;
+            }
+
+            document.getElementById('stat-total').innerText = total;
+            document.getElementById('stat-pending').innerText = pending;
+            document.getElementById('stat-completed').innerText = completed;
+        }
+
+        function exportToExcel() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            if (!tName) {
+                alert("Please select a teacher first to export data.");
+                return;
+            }
+            const table = document.getElementById('planTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Year Plan" });
+            XLSX.writeFile(wb, `${tName}_Year_Plan.xlsx`);
+        }
+
+        function renderTeachersManagementList() {
+            const list = document.getElementById('teachersManagementList');
+            list.innerHTML = '';
+
+            if (teachersMasterDB.length === 0) {
+                list.innerHTML = `<div class="col-span-2 text-center text-slate-400 py-8">No registered teachers found.</div>`;
+                return;
+            }
+
+            teachersMasterDB.forEach(t => {
+                list.innerHTML += `
+                    <div class="bg-white border border-slate-200 p-5 rounded-xl shadow-sm flex justify-between items-center">
+                        <div>
+                            <h4 class="font-extrabold text-slate-800 text-lg">${t.name}</h4>
+                            <p class="text-xs text-slate-500">${t.assignments ? t.assignments.length : 0} Workload Assignment(s)</p>
+                        </div>
+                        <button onclick="deleteTeacher(${t.id})" class="px-4 py-2 bg-rose-50 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs hover:bg-rose-100 transition">Delete Profile</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function deleteTeacher(id) {
+            if (!confirm("Are you sure you want to delete this teacher profile?")) return;
+            teachersMasterDB = teachersMasterDB.filter(t => t.id !== id);
+            await saveToDatabase();
+            renderTeachersManagementList();
+            refreshAllDropdowns();
+        }
+
+        addAssignmentRow();
+    </script>
+</body>
+</html>
