@@ -130,7 +130,7 @@
                 </div>
                 <div class="w-full md:w-1/4">
                     <label class="block font-bold text-slate-700 text-sm mb-1">Filter by Block:</label>
-                    <select id="dashboardBlockSelect" onchange="renderTeacherData()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
+                    <select id="dashboardBlockSelect" onchange="populateDashboardGrades()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
                         <option value="All">All Blocks</option>
                     </select>
                 </div>
@@ -265,6 +265,8 @@
         let teachersMasterDB = [];
         let currentUserPermissions = [];
 
+        const DEFAULT_MONTHS = ["June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
+
         const USER_CREDENTIALS = {
             "dash_user": { pass: "dash123", tabs: ["dashboard"] },
             "edit_user": { pass: "edit123", tabs: ["register", "teacherEdit"] },
@@ -298,15 +300,13 @@
                 currentUserPermissions = USER_CREDENTIALS[loggedUser].tabs;
                 showMainWorkspace();
                 await syncFromDatabase();
-                
-                // Real-time synchronization interval (every 10 seconds)
                 setInterval(syncFromDatabase, 10000); 
             } else {
                 showLoginScreen();
             }
         }
 
-        // Database Sync Function with cache bypass for real-time consistency across devices
+        // Database Sync Function with cache bypass
         async function syncFromDatabase() {
             try {
                 const res = await fetch(`${API_ENDPOINT}?nocache=${Date.now()}`, {
@@ -480,7 +480,7 @@
             addAssignmentRow();
         }
 
-        // Dropdown Helpers
+        // Dropdown Helpers & Cascading Selection Logic
         function refreshAllDropdowns() {
             const dashSelect = document.getElementById('dashboardTeacherSelect');
             const editSelect = document.getElementById('editTeacherSelect');
@@ -506,6 +506,25 @@
                 const blocks = [...new Set(teacher.assignments.map(a => a.block))];
                 blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
             }
+            populateDashboardGrades();
+        }
+
+        function populateDashboardGrades() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            const block = document.getElementById('dashboardBlockSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const gradeSel = document.getElementById('dashboardGradeSelect');
+
+            gradeSel.innerHTML = '<option value="All">All Grades</option>';
+            if (teacher && teacher.assignments) {
+                let grades = [];
+                teacher.assignments.forEach(a => {
+                    if (block === 'All' || a.block === block) {
+                        grades.push(...a.grades);
+                    }
+                });
+                [...new Set(grades)].forEach(g => gradeSel.innerHTML += `<option value="${g}">${g}</option>`);
+            }
             renderTeacherData();
         }
 
@@ -515,6 +534,10 @@
             const blockSel = document.getElementById('editBlockSelect');
             
             blockSel.innerHTML = '<option value="" disabled selected>-- Select Block --</option>';
+            document.getElementById('editSubjectSelect').innerHTML = '<option value="" disabled selected>-- Select Block First --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const blocks = [...new Set(teacher.assignments.map(a => a.block))];
                 blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
@@ -528,6 +551,9 @@
             const subSel = document.getElementById('editSubjectSelect');
 
             subSel.innerHTML = '<option value="" disabled selected>-- Select Subject --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const subs = teacher.assignments.filter(a => a.block === block).map(a => a.subject);
                 [...new Set(subs)].forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
@@ -542,6 +568,8 @@
             const gradeSel = document.getElementById('editGradeSelect');
 
             gradeSel.innerHTML = '<option value="" disabled selected>-- Select Grade --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const assign = teacher.assignments.find(a => a.block === block && a.subject === sub);
                 if (assign) {
@@ -550,8 +578,102 @@
             }
         }
 
+        // Auto Load & Auto Generate Monthly Matrix Grid for Editing
+        function loadPlanForEdit() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            if (!tName || !block || !sub || !grade) return;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            const container = document.getElementById('existingPlanContainer');
+            const tbody = document.getElementById('existingPlanBody');
+            tbody.innerHTML = '';
+
+            // Retrieve existing entries or auto-generate 10 default months
+            DEFAULT_MONTHS.forEach(m => {
+                let planRow = teacher.plans.find(p => p.block === block && p.subject === sub && p.grade === grade && p.Month === m);
+                if (!planRow) {
+                    planRow = { Month: m, NCERT: '', Assessments: '', NEET: '', Sec1: '', Sec2: '', Sec3: '', Sec4: '', Sec5: '', Sec6: '', Status: 'Pending' };
+                }
+
+                tbody.innerHTML += `
+                    <tr data-month="${m}" class="hover:bg-slate-50">
+                        <td class="py-2 px-3 font-bold text-slate-800 border-r">${m}</td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-ncert w-full border p-1.5 rounded text-xs" value="${planRow.NCERT || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-assessments w-full border p-1.5 rounded text-xs" value="${planRow.Assessments || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-neet w-full border p-1.5 rounded text-xs" value="${planRow.NEET || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec1 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec1 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec2 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec2 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec3 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec3 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec4 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec4 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec5 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec5 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec6 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec6 || ''}"></td>
+                        <td class="py-2 px-2">
+                            <select class="edit-status w-full border p-1.5 rounded text-xs font-bold ${planRow.Status === 'Completed' ? 'text-emerald-600' : 'text-amber-600'}">
+                                <option value="Pending" ${planRow.Status !== 'Completed' ? 'selected' : ''}>Pending</option>
+                                <option value="Completed" ${planRow.Status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        async function saveEditedPlan() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            // Remove existing plans for this specific block/subject/grade combination
+            teacher.plans = teacher.plans.filter(p => !(p.block === block && p.subject === sub && p.grade === grade));
+
+            const trs = document.querySelectorAll('#existingPlanBody tr');
+            trs.forEach(tr => {
+                const Month = tr.getAttribute('data-month');
+                const NCERT = tr.querySelector('.edit-ncert').value.trim();
+                const Assessments = tr.querySelector('.edit-assessments').value.trim();
+                const NEET = tr.querySelector('.edit-neet').value.trim();
+                const Sec1 = tr.querySelector('.edit-sec1').value.trim();
+                const Sec2 = tr.querySelector('.edit-sec2').value.trim();
+                const Sec3 = tr.querySelector('.edit-sec3').value.trim();
+                const Sec4 = tr.querySelector('.edit-sec4').value.trim();
+                const Sec5 = tr.querySelector('.edit-sec5').value.trim();
+                const Sec6 = tr.querySelector('.edit-sec6').value.trim();
+                const Status = tr.querySelector('.edit-status').value;
+
+                if (NCERT || Assessments || NEET || Sec1 || Sec2 || Sec3 || Sec4 || Sec5 || Sec6) {
+                    teacher.plans.push({ block, subject: sub, grade, Month, NCERT, Assessments, NEET, Sec1, Sec2, Sec3, Sec4, Sec5, Sec6, Status });
+                }
+            });
+
+            const saved = await saveToDatabase();
+            if (saved) {
+                const msg = document.getElementById('editSuccessMsg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        }
+
+        // Dashboard Visual Renderer & Excel Exporter
         function renderTeacherData() {
             const tName = document.getElementById('dashboardTeacherSelect').value;
+            const blockFilter = document.getElementById('dashboardBlockSelect').value;
+            const gradeFilter = document.getElementById('dashboardGradeSelect').value;
             const teacher = teachersMasterDB.find(t => t.name === tName);
             
             if (!teacher) return;
@@ -565,7 +687,13 @@
             let total = 0, pending = 0, completed = 0;
 
             if (teacher.plans && teacher.plans.length > 0) {
-                teacher.plans.forEach(p => {
+                const filteredPlans = teacher.plans.filter(p => {
+                    const matchBlock = (blockFilter === 'All' || p.block === blockFilter);
+                    const matchGrade = (gradeFilter === 'All' || p.grade === gradeFilter);
+                    return matchBlock && matchGrade;
+                });
+
+                filteredPlans.forEach(p => {
                     total++;
                     if (p.Status === 'Completed') completed++; else pending++;
 
@@ -588,13 +716,26 @@
                         </tr>
                     `;
                 });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-6 text-slate-400">No active plan items found for this teacher.</td></tr>`;
+            }
+
+            if (total === 0) {
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-6 text-slate-400">No active plan items found matching selected filters.</td></tr>`;
             }
 
             document.getElementById('stat-total').innerText = total;
             document.getElementById('stat-pending').innerText = pending;
             document.getElementById('stat-completed').innerText = completed;
+        }
+
+        function exportToExcel() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            if (!tName) {
+                alert("Please select a teacher first to export data.");
+                return;
+            }
+            const table = document.getElementById('planTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Year Plan" });
+            XLSX.writeFile(wb, `${tName}_Year_Plan.xlsx`);
         }
 
         function renderTeachersManagementList() {
@@ -613,7 +754,7 @@
                             <h4 class="font-extrabold text-slate-800 text-lg">${t.name}</h4>
                             <p class="text-xs text-slate-500">${t.assignments ? t.assignments.length : 0} Workload Assignment(s)</p>
                         </div>
-                        <button onclick="deleteTeacher(${t.id})" class="px-4 py-2 bg-rose-50 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs hover:bg-rose-100 transition">Delete</button>
+                        <button onclick="deleteTeacher(${t.id})" class="px-4 py-2 bg-rose-50 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs hover:bg-rose-100 transition">Delete Profile</button>
                     </div>
                 `;
             });
