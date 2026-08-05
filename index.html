@@ -193,8 +193,11 @@
         </div>
 
         <div id="teacherEdit-section" class="hidden max-w-6xl mx-auto">
-            <div class="border-l-4 border-purple-600 pl-3 mb-4">
+            <div class="border-l-4 border-purple-600 pl-3 mb-4 flex justify-between items-center flex-wrap gap-2">
                 <h3 class="text-2xl font-bold text-purple-950">Update Lesson Plan</h3>
+                <button onclick="autoGeneratePlanForSelected()" class="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5">
+                    ⚡ Auto-Generate Academic Year Plan
+                </button>
             </div>
             
             <div class="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -293,7 +296,6 @@
             }
         };
 
-        // Application Initialization
         async function initApp() {
             const loggedUser = localStorage.getItem('montessoriLoggedUser');
             if (loggedUser && USER_CREDENTIALS[loggedUser]) {
@@ -306,7 +308,6 @@
             }
         }
 
-        // Database Sync Function
         async function syncFromDatabase() {
             try {
                 const res = await fetch(`${API_ENDPOINT}?nocache=${Date.now()}`, {
@@ -355,7 +356,6 @@
             }
         }
 
-        // Auth Functions
         function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('username').value.trim();
@@ -415,7 +415,6 @@
             if (tabId === 'manageTeachers') renderTeachersManagementList();
         }
 
-        // Registration Logic
         function addAssignmentRow() {
             const container = document.getElementById('assignments-container');
             const id = Date.now();
@@ -480,7 +479,6 @@
             addAssignmentRow();
         }
 
-        // Dropdown Helpers
         function refreshAllDropdowns() {
             const dashSelect = document.getElementById('dashboardTeacherSelect');
             const editSelect = document.getElementById('editTeacherSelect');
@@ -578,7 +576,20 @@
             }
         }
 
-        // Matrix Grid Loading
+        function autoGeneratePlanForSelected() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            if (!tName || !block || !sub || !grade) {
+                alert("Please select Teacher, Block, Subject, and Grade first.");
+                return;
+            }
+
+            loadPlanForEdit();
+        }
+
         function loadPlanForEdit() {
             const tName = document.getElementById('editTeacherSelect').value;
             const block = document.getElementById('editBlockSelect').value;
@@ -667,7 +678,6 @@
             }
         }
 
-        // Dashboard Visual Renderer & Excel Exporter
         function renderTeacherData() {
             const tName = document.getElementById('dashboardTeacherSelect').value;
             const blockFilter = document.getElementById('dashboardBlockSelect').value;
