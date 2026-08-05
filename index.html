@@ -36,7 +36,7 @@
                     </div>
                     <div class="inline-block mt-2.5 px-4 py-1 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-full border border-indigo-100 shadow-sm">
                         <p class="text-xs text-indigo-700 font-extrabold uppercase tracking-widest">
-                            Teachers year Plan Tracker
+                            Teachers Year Plan Tracker
                         </p>
                     </div>
                 </div>
@@ -103,7 +103,7 @@
                 
                 <div>
                     <h4 class="font-bold text-slate-800 mb-1 text-lg">Workload Assignments</h4>
-                    <p class="text-xs text-slate-500 mb-4">Select operational block, subject, and assign sections.</p>
+                    <p class="text-xs text-slate-500 mb-4">Select operational block, subject, and assign target grade sections.</p>
                     
                     <div id="assignments-container" class="space-y-4"></div>
                     
@@ -130,7 +130,7 @@
                 </div>
                 <div class="w-full md:w-1/4">
                     <label class="block font-bold text-slate-700 text-sm mb-1">Filter by Block:</label>
-                    <select id="dashboardBlockSelect" onchange="renderTeacherData()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
+                    <select id="dashboardBlockSelect" onchange="populateDashboardGrades()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 font-semibold text-base cursor-pointer bg-white shadow-sm transition">
                         <option value="All">All Blocks</option>
                     </select>
                 </div>
@@ -147,11 +147,6 @@
             </div>
 
             <div id="teacher-dashboard-content" class="hidden">
-                <div class="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-6 rounded-2xl border border-blue-100 shadow-sm">
-                    <h3 class="text-xl font-bold text-blue-950 mb-3" id="workloadHeader">Teacher Workload Profile</h3>
-                    <div id="workloadDisplay" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-                </div>
-
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-md border border-blue-500">
                         <h4 class="text-blue-100 font-bold uppercase tracking-wider text-xs">Filtered Lessons</h4>
@@ -203,7 +198,7 @@
             </div>
             
             <div class="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
                     <div>
                         <label class="block font-bold mb-2 text-slate-700 text-sm">Select Teacher</label>
                         <select id="editTeacherSelect" onchange="populateEditBlocks()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm"></select>
@@ -221,9 +216,6 @@
                         <select id="editGradeSelect" onchange="loadPlanForEdit()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm">
                             <option value="" disabled selected>-- Choose Subject First --</option>
                         </select>
-                    </div>
-                    <div>
-                        <button onclick="exportEditPlanToExcel()" class="w-full px-4 py-3 bg-rose-800 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-lg text-xs md:text-sm">📥 Export Filtered Excel</button>
                     </div>
                 </div>
                 
@@ -273,6 +265,8 @@
         let teachersMasterDB = [];
         let currentUserPermissions = [];
 
+        const DEFAULT_MONTHS = ["June", "July", "August", "September", "October", "November", "December", "January", "February", "March"];
+
         const USER_CREDENTIALS = {
             "dash_user": { pass: "dash123", tabs: ["dashboard"] },
             "edit_user": { pass: "edit123", tabs: ["register", "teacherEdit"] },
@@ -306,23 +300,37 @@
                 currentUserPermissions = USER_CREDENTIALS[loggedUser].tabs;
                 showMainWorkspace();
                 await syncFromDatabase();
+                setInterval(syncFromDatabase, 10000); 
             } else {
                 showLoginScreen();
             }
         }
 
-        // Database Sync Functions (Handles multi-device consistency)
+        // Database Sync Function
         async function syncFromDatabase() {
             try {
-                const res = await fetch(`${API_ENDPOINT}?t=${Date.now()}`, {
+                const res = await fetch(`${API_ENDPOINT}?nocache=${Date.now()}`, {
                     method: 'GET',
-                    cache: 'no-store',
-                    headers: { 'Pragma': 'no-cache', 'Cache-Control': 'no-cache' }
+                    headers: { 
+                        'Pragma': 'no-cache', 
+                        'Cache-Control': 'no-cache, no-store, must-revalidate' 
+                    }
                 });
                 if (res.ok) {
                     teachersMasterDB = await res.json();
-                    console.log("Database fetched:", teachersMasterDB);
+                    
+                    const currentDashTeacher = document.getElementById('dashboardTeacherSelect')?.value;
+                    const currentEditTeacher = document.getElementById('editTeacherSelect')?.value;
+
                     refreshAllDropdowns();
+
+                    if (currentDashTeacher) {
+                        document.getElementById('dashboardTeacherSelect').value = currentDashTeacher;
+                        renderTeacherData();
+                    }
+                    if (currentEditTeacher) {
+                        document.getElementById('editTeacherSelect').value = currentEditTeacher;
+                    }
                 }
             } catch (err) {
                 console.error("Database fetch error:", err);
@@ -337,16 +345,17 @@
                     body: JSON.stringify(teachersMasterDB)
                 });
                 if (!res.ok) throw new Error("Failed to write to database");
-                console.log("Database saved successfully.");
+                
+                await syncFromDatabase();
                 return true;
             } catch (err) {
                 console.error("Database save error:", err);
-                alert("Error connecting to database. Please check connection.");
+                alert("Error saving data to database. Please check connection.");
                 return false;
             }
         }
 
-        // Auth Logic
+        // Auth Functions
         function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('username').value.trim();
@@ -358,6 +367,7 @@
                 document.getElementById('loginError').classList.add('hidden');
                 showMainWorkspace();
                 syncFromDatabase();
+                setInterval(syncFromDatabase, 10000);
             } else {
                 document.getElementById('loginError').classList.remove('hidden');
             }
@@ -389,7 +399,6 @@
             }
         }
 
-        // Navigation
         function switchTab(tabId) {
             ['register', 'teacherEdit', 'manageTeachers', 'dashboard'].forEach(tab => {
                 const sec = document.getElementById(`${tab}-section`);
@@ -446,11 +455,9 @@
                 const block = r.querySelector('.assign-block').value.trim();
                 const subject = r.querySelector('.assign-subject').value.trim();
                 const grades = r.querySelector('.assign-grades').value.split(',').map(g => g.trim()).filter(Boolean);
-                
                 assignments.push({ block, subject, grades });
             });
 
-            // Check if teacher exists
             let teacher = teachersMasterDB.find(t => t.name.toLowerCase() === name.toLowerCase());
             if (!teacher) {
                 teacher = { id: Date.now(), name, assignments: [], plans: [] };
@@ -473,17 +480,19 @@
             addAssignmentRow();
         }
 
-        // Dropdown Populate Helpers
+        // Dropdown Helpers
         function refreshAllDropdowns() {
             const dashSelect = document.getElementById('dashboardTeacherSelect');
             const editSelect = document.getElementById('editTeacherSelect');
             
             [dashSelect, editSelect].forEach(sel => {
                 if (!sel) return;
+                const currentVal = sel.value;
                 sel.innerHTML = '<option value="" disabled selected>-- Choose Teacher --</option>';
                 teachersMasterDB.forEach(t => {
                     sel.innerHTML += `<option value="${t.name}">${t.name}</option>`;
                 });
+                if (currentVal) sel.value = currentVal;
             });
         }
 
@@ -497,6 +506,25 @@
                 const blocks = [...new Set(teacher.assignments.map(a => a.block))];
                 blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
             }
+            populateDashboardGrades();
+        }
+
+        function populateDashboardGrades() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            const block = document.getElementById('dashboardBlockSelect').value;
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            const gradeSel = document.getElementById('dashboardGradeSelect');
+
+            gradeSel.innerHTML = '<option value="All">All Grades</option>';
+            if (teacher && teacher.assignments) {
+                let grades = [];
+                teacher.assignments.forEach(a => {
+                    if (block === 'All' || a.block === block) {
+                        grades.push(...a.grades);
+                    }
+                });
+                [...new Set(grades)].forEach(g => gradeSel.innerHTML += `<option value="${g}">${g}</option>`);
+            }
             renderTeacherData();
         }
 
@@ -506,6 +534,10 @@
             const blockSel = document.getElementById('editBlockSelect');
             
             blockSel.innerHTML = '<option value="" disabled selected>-- Select Block --</option>';
+            document.getElementById('editSubjectSelect').innerHTML = '<option value="" disabled selected>-- Select Block First --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const blocks = [...new Set(teacher.assignments.map(a => a.block))];
                 blocks.forEach(b => blockSel.innerHTML += `<option value="${b}">${b}</option>`);
@@ -519,6 +551,9 @@
             const subSel = document.getElementById('editSubjectSelect');
 
             subSel.innerHTML = '<option value="" disabled selected>-- Select Subject --</option>';
+            document.getElementById('editGradeSelect').innerHTML = '<option value="" disabled selected>-- Select Subject First --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const subs = teacher.assignments.filter(a => a.block === block).map(a => a.subject);
                 [...new Set(subs)].forEach(s => subSel.innerHTML += `<option value="${s}">${s}</option>`);
@@ -533,6 +568,8 @@
             const gradeSel = document.getElementById('editGradeSelect');
 
             gradeSel.innerHTML = '<option value="" disabled selected>-- Select Grade --</option>';
+            document.getElementById('existingPlanContainer').classList.add('hidden');
+
             if (teacher && teacher.assignments) {
                 const assign = teacher.assignments.find(a => a.block === block && a.subject === sub);
                 if (assign) {
@@ -541,9 +578,100 @@
             }
         }
 
-        // Render Dashboard Data
+        // Matrix Grid Loading
+        function loadPlanForEdit() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            if (!tName || !block || !sub || !grade) return;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            const container = document.getElementById('existingPlanContainer');
+            const tbody = document.getElementById('existingPlanBody');
+            tbody.innerHTML = '';
+
+            DEFAULT_MONTHS.forEach(m => {
+                let planRow = teacher.plans.find(p => p.block === block && p.subject === sub && p.grade === grade && p.Month === m);
+                if (!planRow) {
+                    planRow = { Month: m, NCERT: '', Assessments: '', NEET: '', Sec1: '', Sec2: '', Sec3: '', Sec4: '', Sec5: '', Sec6: '', Status: 'Pending' };
+                }
+
+                tbody.innerHTML += `
+                    <tr data-month="${m}" class="hover:bg-slate-50">
+                        <td class="py-2 px-3 font-bold text-slate-800 border-r">${m}</td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-ncert w-full border p-1.5 rounded text-xs" value="${planRow.NCERT || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-assessments w-full border p-1.5 rounded text-xs" value="${planRow.Assessments || ''}"></td>
+                        <td class="py-2 px-2 border-r"><input type="text" class="edit-neet w-full border p-1.5 rounded text-xs" value="${planRow.NEET || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec1 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec1 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec2 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec2 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec3 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec3 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec4 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec4 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec5 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec5 || ''}"></td>
+                        <td class="py-2 px-1 border-r"><input type="text" class="edit-sec6 w-full border p-1.5 rounded text-xs text-center" value="${planRow.Sec6 || ''}"></td>
+                        <td class="py-2 px-2">
+                            <select class="edit-status w-full border p-1.5 rounded text-xs font-bold ${planRow.Status === 'Completed' ? 'text-emerald-600' : 'text-amber-600'}">
+                                <option value="Pending" ${planRow.Status !== 'Completed' ? 'selected' : ''}>Pending</option>
+                                <option value="Completed" ${planRow.Status === 'Completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.classList.remove('hidden');
+        }
+
+        async function saveEditedPlan() {
+            const tName = document.getElementById('editTeacherSelect').value;
+            const block = document.getElementById('editBlockSelect').value;
+            const sub = document.getElementById('editSubjectSelect').value;
+            const grade = document.getElementById('editGradeSelect').value;
+
+            const teacher = teachersMasterDB.find(t => t.name === tName);
+            if (!teacher) return;
+
+            if (!teacher.plans) teacher.plans = [];
+
+            teacher.plans = teacher.plans.filter(p => !(p.block === block && p.subject === sub && p.grade === grade));
+
+            const trs = document.querySelectorAll('#existingPlanBody tr');
+            trs.forEach(tr => {
+                const Month = tr.getAttribute('data-month');
+                const NCERT = tr.querySelector('.edit-ncert').value.trim();
+                const Assessments = tr.querySelector('.edit-assessments').value.trim();
+                const NEET = tr.querySelector('.edit-neet').value.trim();
+                const Sec1 = tr.querySelector('.edit-sec1').value.trim();
+                const Sec2 = tr.querySelector('.edit-sec2').value.trim();
+                const Sec3 = tr.querySelector('.edit-sec3').value.trim();
+                const Sec4 = tr.querySelector('.edit-sec4').value.trim();
+                const Sec5 = tr.querySelector('.edit-sec5').value.trim();
+                const Sec6 = tr.querySelector('.edit-sec6').value.trim();
+                const Status = tr.querySelector('.edit-status').value;
+
+                if (NCERT || Assessments || NEET || Sec1 || Sec2 || Sec3 || Sec4 || Sec5 || Sec6) {
+                    teacher.plans.push({ block, subject: sub, grade, Month, NCERT, Assessments, NEET, Sec1, Sec2, Sec3, Sec4, Sec5, Sec6, Status });
+                }
+            });
+
+            const saved = await saveToDatabase();
+            if (saved) {
+                const msg = document.getElementById('editSuccessMsg');
+                msg.classList.remove('hidden');
+                setTimeout(() => msg.classList.add('hidden'), 3000);
+            }
+        }
+
+        // Dashboard Visual Renderer & Excel Exporter
         function renderTeacherData() {
             const tName = document.getElementById('dashboardTeacherSelect').value;
+            const blockFilter = document.getElementById('dashboardBlockSelect').value;
+            const gradeFilter = document.getElementById('dashboardGradeSelect').value;
             const teacher = teachersMasterDB.find(t => t.name === tName);
             
             if (!teacher) return;
@@ -557,7 +685,13 @@
             let total = 0, pending = 0, completed = 0;
 
             if (teacher.plans && teacher.plans.length > 0) {
-                teacher.plans.forEach(p => {
+                const filteredPlans = teacher.plans.filter(p => {
+                    const matchBlock = (blockFilter === 'All' || p.block === blockFilter);
+                    const matchGrade = (gradeFilter === 'All' || p.grade === gradeFilter);
+                    return matchBlock && matchGrade;
+                });
+
+                filteredPlans.forEach(p => {
                     total++;
                     if (p.Status === 'Completed') completed++; else pending++;
 
@@ -580,8 +714,10 @@
                         </tr>
                     `;
                 });
-            } else {
-                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-6 text-slate-400">No active plan items found for this teacher.</td></tr>`;
+            }
+
+            if (total === 0) {
+                tbody.innerHTML = `<tr><td colspan="14" class="text-center py-6 text-slate-400">No active plan items found matching selected filters.</td></tr>`;
             }
 
             document.getElementById('stat-total').innerText = total;
@@ -589,7 +725,17 @@
             document.getElementById('stat-completed').innerText = completed;
         }
 
-        // Manage Teachers Section
+        function exportToExcel() {
+            const tName = document.getElementById('dashboardTeacherSelect').value;
+            if (!tName) {
+                alert("Please select a teacher first to export data.");
+                return;
+            }
+            const table = document.getElementById('planTable');
+            const wb = XLSX.utils.table_to_book(table, { sheet: "Year Plan" });
+            XLSX.writeFile(wb, `${tName}_Year_Plan.xlsx`);
+        }
+
         function renderTeachersManagementList() {
             const list = document.getElementById('teachersManagementList');
             list.innerHTML = '';
@@ -606,7 +752,7 @@
                             <h4 class="font-extrabold text-slate-800 text-lg">${t.name}</h4>
                             <p class="text-xs text-slate-500">${t.assignments ? t.assignments.length : 0} Workload Assignment(s)</p>
                         </div>
-                        <button onclick="deleteTeacher(${t.id})" class="px-4 py-2 bg-rose-50 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs hover:bg-rose-100 transition">Delete</button>
+                        <button onclick="deleteTeacher(${t.id})" class="px-4 py-2 bg-rose-50 text-rose-600 font-bold border border-rose-200 rounded-lg text-xs hover:bg-rose-100 transition">Delete Profile</button>
                     </div>
                 `;
             });
@@ -620,7 +766,6 @@
             refreshAllDropdowns();
         }
 
-        // Initial Dynamic Setup
         addAssignmentRow();
     </script>
 </body>
