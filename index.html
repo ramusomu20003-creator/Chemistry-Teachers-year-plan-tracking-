@@ -103,7 +103,7 @@
                 
                 <div>
                     <h4 class="font-bold text-slate-800 mb-1 text-lg">Workload Assignments</h4>
-                    <p class="text-xs text-slate-500 mb-4">Select operational block, subject, and assign target grade sections.</p>
+                    <p class="text-xs text-slate-500 mb-4">Select operational block, subject, and assign sections.</p>
                     
                     <div id="assignments-container" class="space-y-4"></div>
                     
@@ -147,6 +147,11 @@
             </div>
 
             <div id="teacher-dashboard-content" class="hidden">
+                <div class="mb-8 bg-gradient-to-br from-blue-50 to-indigo-50/50 p-6 rounded-2xl border border-blue-100 shadow-sm">
+                    <h3 class="text-xl font-bold text-blue-950 mb-3" id="workloadHeader">Teacher Workload Profile</h3>
+                    <div id="workloadDisplay" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                </div>
+
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
                     <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-2xl shadow-md border border-blue-500">
                         <h4 class="text-blue-100 font-bold uppercase tracking-wider text-xs">Filtered Lessons</h4>
@@ -198,7 +203,7 @@
             </div>
             
             <div class="space-y-6 bg-slate-50/50 p-6 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
                     <div>
                         <label class="block font-bold mb-2 text-slate-700 text-sm">Select Teacher</label>
                         <select id="editTeacherSelect" onchange="populateEditBlocks()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm"></select>
@@ -216,6 +221,9 @@
                         <select id="editGradeSelect" onchange="loadPlanForEdit()" class="w-full border border-slate-300 p-3 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white shadow-sm transition font-semibold text-sm">
                             <option value="" disabled selected>-- Choose Subject First --</option>
                         </select>
+                    </div>
+                    <div>
+                        <button onclick="exportEditPlanToExcel()" class="w-full px-4 py-3 bg-rose-800 hover:bg-rose-900 text-white font-bold rounded-xl transition shadow-lg text-xs md:text-sm">📥 Export Filtered Excel</button>
                     </div>
                 </div>
                 
@@ -303,7 +311,7 @@
             }
         }
 
-        // Database Sync Functions (Multi-device real-time consistency)
+        // Database Sync Functions (Handles multi-device consistency)
         async function syncFromDatabase() {
             try {
                 const res = await fetch(`${API_ENDPOINT}?t=${Date.now()}`, {
@@ -313,6 +321,7 @@
                 });
                 if (res.ok) {
                     teachersMasterDB = await res.json();
+                    console.log("Database fetched:", teachersMasterDB);
                     refreshAllDropdowns();
                 }
             } catch (err) {
@@ -328,15 +337,16 @@
                     body: JSON.stringify(teachersMasterDB)
                 });
                 if (!res.ok) throw new Error("Failed to write to database");
+                console.log("Database saved successfully.");
                 return true;
             } catch (err) {
                 console.error("Database save error:", err);
-                alert("Error saving data to database.");
+                alert("Error connecting to database. Please check connection.");
                 return false;
             }
         }
 
-        // Auth Functions
+        // Auth Logic
         function handleLogin(e) {
             e.preventDefault();
             const u = document.getElementById('username').value.trim();
@@ -379,6 +389,7 @@
             }
         }
 
+        // Navigation
         function switchTab(tabId) {
             ['register', 'teacherEdit', 'manageTeachers', 'dashboard'].forEach(tab => {
                 const sec = document.getElementById(`${tab}-section`);
@@ -435,9 +446,11 @@
                 const block = r.querySelector('.assign-block').value.trim();
                 const subject = r.querySelector('.assign-subject').value.trim();
                 const grades = r.querySelector('.assign-grades').value.split(',').map(g => g.trim()).filter(Boolean);
+                
                 assignments.push({ block, subject, grades });
             });
 
+            // Check if teacher exists
             let teacher = teachersMasterDB.find(t => t.name.toLowerCase() === name.toLowerCase());
             if (!teacher) {
                 teacher = { id: Date.now(), name, assignments: [], plans: [] };
@@ -528,6 +541,7 @@
             }
         }
 
+        // Render Dashboard Data
         function renderTeacherData() {
             const tName = document.getElementById('dashboardTeacherSelect').value;
             const teacher = teachersMasterDB.find(t => t.name === tName);
@@ -575,6 +589,7 @@
             document.getElementById('stat-completed').innerText = completed;
         }
 
+        // Manage Teachers Section
         function renderTeachersManagementList() {
             const list = document.getElementById('teachersManagementList');
             list.innerHTML = '';
@@ -605,6 +620,7 @@
             refreshAllDropdowns();
         }
 
+        // Initial Dynamic Setup
         addAssignmentRow();
     </script>
 </body>
