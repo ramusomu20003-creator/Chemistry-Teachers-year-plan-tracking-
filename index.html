@@ -3,18 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teacher Registration - MERN Stack</title>
-    <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    
+    <title>Teacher Registration</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f9;
             margin: 0;
-            padding: 40px;
+            padding: 20px;
         }
         .form-container {
             max-width: 500px;
@@ -50,121 +45,77 @@
         button:hover {
             background-color: #0056b3;
         }
-        .message {
-            margin-bottom: 15px;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
-        .success { background-color: #d4edda; color: #155724; }
-        .error { background-color: #f8d7da; color: #721c24; }
     </style>
 </head>
 <body>
 
-    <div id="root"></div>
+    <div class="form-container">
+        <h2>Register Teacher</h2>
+        <form id="teacherRegistrationForm">
+            <div class="form-group">
+                <label for="teacherName">Teacher Name:</label>
+                <input type="text" id="teacherName" name="teacherName" required placeholder="Enter teacher's full name">
+            </div>
 
-    <script type="text/babel">
-        const { useState } = React;
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" name="email" required placeholder="Enter email address">
+            </div>
 
-        function RegisterTeacher() {
-            const [formData, setFormData] = useState({
-                teacherName: '',
-                email: '',
-                blockName: ''
-            });
+            <div class="form-group">
+                <label for="blockName">Block Name:</label>
+                <select id="blockName" name="blockName" required>
+                    <option value="" disabled selected>-- Select Block Name --</option>
+                    <option value="NILGIRI">NILGIRI</option>
+                    <option value="ARAVALLI">ARAVALLI</option>
+                    <option value="SUMERU">SUMERU</option>
+                    <option value="VINDHYA">VINDHYA</option>
+                    <option value="HIMADRA">HIMADRA</option>
+                    <option value="SAHYADRI">SAHYADRI</option>
+                    <option value="PURVANCHAL">PURVANCHAL</option>
+                </select>
+            </div>
 
-            const [status, setStatus] = useState({ message: '', type: '' });
+            <button type="submit">Register Teacher</button>
+        </form>
+    </div>
 
-            const handleChange = (e) => {
-                setFormData({ ...formData, [e.target.name]: e.target.value });
+    <script>
+        const form = document.getElementById('teacherRegistrationForm');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // Gather form data
+            const formData = {
+                teacherName: document.getElementById('teacherName').value,
+                email: document.getElementById('email').value,
+                blockName: document.getElementById('blockName').value
             };
 
-            const handleSubmit = async (e) => {
-                e.preventDefault();
-                setStatus({ message: '', type: '' });
+            try {
+                // Send data to your Node.js/Express backend API
+                const response = await fetch('http://localhost:5000/api/teachers/register', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
 
-                try {
-                    const response = await axios.post('http://localhost:5000/api/teachers/register', formData);
-                    
-                    setStatus({ 
-                        message: response.data.message || 'Teacher registered successfully!', 
-                        type: 'success' 
-                    });
-                    
-                    setFormData({ teacherName: '', email: '', blockName: '' });
-                } catch (error) {
-                    setStatus({ 
-                        message: error.response?.data?.message || 'Failed to connect to the server.', 
-                        type: 'error' 
-                    });
+                const result = await response.json();
+
+                if (response.ok) {
+                    alert('Teacher registered successfully!');
+                    form.reset();
+                } else {
+                    alert('Error: ' + (result.message || 'Registration failed'));
                 }
-            };
-
-            return (
-                <div className="form-container">
-                    <h2>Register Teacher</h2>
-                    
-                    {status.message && (
-                        <div className={`message ${status.type}`}>
-                            {status.message}
-                        </div>
-                    )}
-
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group">
-                            <label htmlFor="teacherName">Teacher Name:</label>
-                            <input
-                                type="text"
-                                id="teacherName"
-                                name="teacherName"
-                                value={formData.teacherName}
-                                onChange={handleChange}
-                                placeholder="Enter teacher's full name"
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="email">Email Address:</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                placeholder="Enter email address"
-                                required
-                            />
-                        </div>
-
-                        <div className="form-group">
-                            <label htmlFor="blockName">Block Name:</label>
-                            <select
-                                id="blockName"
-                                name="blockName"
-                                value={formData.blockName}
-                                onChange={handleChange}
-                                required
-                            >
-                                <option value="" disabled>-- Select Block Name --</option>
-                                <option value="NILGIRI">NILGIRI</option>
-                                <option value="ARAVALLI">ARAVALLI</option>
-                                <option value="SUMERU">SUMERU</option>
-                                <option value="VINDHYA">VINDHYA</option>
-                                <option value="HIMADRA">HIMADRA</option>
-                                <option value="SAHYADRI">SAHYADRI</option>
-                                <option value="PURVANCHAL">PURVANCHAL</option>
-                            </select>
-                        </div>
-
-                        <button type="submit">Register Teacher</button>
-                    </form>
-                </div>
-            );
-        }
-
-        ReactDOM.render(<RegisterTeacher />, document.getElementById('root'));
+            } catch (error) {
+                console.error('Network error:', error);
+                alert('Failed to connect to the server.');
+            }
+        });
     </script>
 
 </body>
